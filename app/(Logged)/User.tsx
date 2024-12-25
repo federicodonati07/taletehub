@@ -6,8 +6,17 @@ import supabase from '@/supabase/client';
 import supabaseAdmin from '@/supabase/adminClient';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/dropdown";
 import NewUser from './NewUser';
+import { FaInstagram } from "react-icons/fa";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
+import { TbGhost2 } from "react-icons/tb";
+import { CiCircleInfo } from "react-icons/ci";
+import {Popover, PopoverContent, PopoverTrigger} from "@nextui-org/popover"
+import { MdModeEdit } from "react-icons/md";
+import { FaShare } from "react-icons/fa";
 
 const User = () => {
+    const [isEditing, setIsEditing] = useState(false)
+
     const [isLoadingL, setIsLoadingL] = useState(false);
     const [isLoadingD, setIsLoadingD] = useState(false);
     const [id, setId] = useState<string>();
@@ -24,6 +33,7 @@ const User = () => {
     const [following, setFollowing] = useState();
     const [igLink, setIgLink] = useState<string>()
     const [startNew, setStartNew] = useState<boolean>()
+    
 
 
     useEffect(() => {
@@ -73,24 +83,102 @@ const User = () => {
             .from("users")
             .delete()
             .eq("uuid", id)
+        try{
+            const {data: files, error: listError} = await supabase
+                .storage
+                .from("UserProfilePicture")
+                .list(id)
+
+            if(listError){
+                throw listError
+            }
+            if(!files || files.length === 0){
+                console.log("no files found in the folder")
+                return
+            }
+
+            const paths: string[] = []
+
+            for(const file of files){
+                paths.push(`${id}/${file.name}`)
+
+                const {data: subfolderFilse, error: subfolderError} = await supabase
+                    .storage
+                    .from("UserProfilePicture")
+                    .list(`${id}/${file.name}`)
+
+                    if(subfolderError){
+                        console.error(`Error listing subfolder ${file.name}:`, subfolderError.message);
+                        continue;
+                    }
+                    if(subfolderFilse){
+                        subfolderFilse.forEach(subFile => paths.push(`${id}/${file.name}/${subFile.name}`))
+                    }
+            }
+            const {error: deleteError} = await supabase
+                .storage
+                .from("UserProfilePicture")
+                .remove(paths)
+
+            if(deleteError){
+                throw deleteError
+            }
+            console.log('Folder and its contents deleted successfully.');
+        } catch (error) {
+            console.error('Error deleting folder:', error!);
+        }
 
         await supabase.auth.signOut();
         await supabaseAdmin.auth.admin.deleteUser(String(session?.user.id));
         window.location.reload();
     };
 
+    const handleIgLink = ()=>{
+        window.open(`https://www.instagram.com/${igLink}`, '_blank');
+    }
+
+    const handleEditUser = ()=>{
+        setIsEditing(true)
+    }
+
     return(
         <>
-            <div className={`${startNew ? "block" : "hidden"}`}>
+            <div className={`${startNew ? "block" : "hidden"} absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-full max-w-4xl max-h-screen`}>
                 <NewUser id={String(id)}></NewUser>
             </div>
-            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-full max-w-4xl max-h-screen ${startNew ? "hidden" : "block"}`}>
+            <div className={`${isEditing ? "block" : "hidden"} absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-full max-w-4xl max-h-screen`}>
+                <NewUser id={String(id)}></NewUser>
+            </div>
+            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-full max-w-4xl max-h-screen ${isEditing ? "hidden":"block"} ${startNew ? "hidden" : "block"}`}>
                 {/* Avatar Section */}
                 <div className="flex flex-row justify-center items-center text-center mb-6">
                     <div>
                         <Avatar size="lg" src={picture} className="cursor-pointer" />
                     </div>
-                    <span className="text-2xl font-bold font-poppins ml-4 text-white">{username}</span>
+                    <div className='flex flex-row'>
+                        <span className="text-2xl font-bold font-poppins ml-4 text-white">
+                            {username}
+                        </span>
+                        
+                        <Popover placement="bottom" showArrow={true} color={status == "verified" ? "primary" : status == "admin" ? "success" : ""} >
+                            <PopoverTrigger>
+                                <span>
+                                    {status == "verified" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-blue-500'/>): status == "admin" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-emerald-500'/>) : ("")}
+                                </span>
+                            </PopoverTrigger>
+                            <PopoverContent>
+                                <div className="px-1 py-2">
+                                    <div className="text-small font-bold text-white">
+                                        {status == "verified" ? "Account Verificato" : status == "admin" ? "Account Amministratore" : ""}
+                                    </div>
+                                    <div className="text-tiny text-white">
+                                        {status == "verified" ? "Account verificato da un Amministratore" : status == "admin" ? "Account appartenente a un amministratore" : ""}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    
                 </div>
 
                 {/* Stats Section */}
@@ -126,9 +214,49 @@ const User = () => {
                     </div>
                 </div>
 
+                <div className='grid grid-cols-2 gap-2 my-5'>
+                    <Button className='font-poppins font-bold' onPress={handleEditUser}>
+                        <MdModeEdit className='font-bold text-xl'/>
+                        Modifica Profilo
+                    </Button>
+                    <Button color='primary' className='font-poppins font-bold'>
+                        <FaShare className='font-bold text-xl'/>
+                        Condividi Profilo
+                    </Button>
+                </div>
+
+                {shadowBanned ? (
+                    <div>
+                        <Popover placement="bottom" showArrow={true} color='danger'>
+                            <PopoverTrigger>
+                                <div className='w-full rounded-full bg-zinc-900/60 text-white flex flex-row items-center justify-center text-center p-2 mt-5'>
+                                    <TbGhost2 className='text-4xl font-bold mr-1'/>
+                                    <span className='font-poppins font-bold mr-1 text-lg'>Sei stato shadow bannato</span>
+                                    <CiCircleInfo className="text-xl font-bold cursor-pointer"/>
+                                </div>
+                            </PopoverTrigger>
+                            <PopoverContent>
+                                <div className="px-1 py-2">
+                                <div className="text-small font-bold">Account sottoposto a restrizioni</div>
+                                <div className="text-tiny">Il tuo account non verrà più visualizzato nelle ricerche degli altri utenti</div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                ):("")}
                 <div className="flex flex-col items-start justify-start text-left mt-10 mb-10">
                     <div className="flex flex-col">
-                        <span className="text-xl font-bold font-poppins">{ns}</span>
+                        <div className='grid grid-cols-2 gap-2'>
+                            <span className="text-xl font-bold font-poppins">{ns}</span>
+                            {igLink == "" ? ("") : (
+                                <>
+                                    <Button variant="light" onPress={handleIgLink}>
+                                            <FaInstagram className='font-bold text-lg'/>
+                                            <span className='font-bold font-lora'>{igLink}</span>
+                                    </Button>
+                                </>
+                            )}
+                        </div>
                         <span className="font-lora">{bio}</span>
                     </div>
                 </div>

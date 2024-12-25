@@ -54,6 +54,8 @@ const Logged = () => {
               console.log(data)
             
           }
+
+          
         }
       }
     }
