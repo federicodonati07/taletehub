@@ -163,7 +163,7 @@ const User = () => {
                         <Popover placement="bottom" showArrow={true} color={status == "verified" ? "primary" : status == "admin" ? "success" : ""} >
                             <PopoverTrigger>
                                 <span>
-                                    {status == "verified" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-blue-500'/>): status == "admin" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-emerald-500'/>) : ("")}
+                                    {status == "verified" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-blue-500 cursor-pointer'/>): status == "admin" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-emerald-500 cursor-pointer'/>) : ("")}
                                 </span>
                             </PopoverTrigger>
                             <PopoverContent>
