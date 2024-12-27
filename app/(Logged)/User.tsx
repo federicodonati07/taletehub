@@ -380,8 +380,9 @@ const User = () => {
                     </div>
                 </div>
 
-                <div>
-                    <span className="text-zinc-700">{id}</span>
+                <div className='flex flex-col justify-center items-center text-cneter'>
+                    <span className='text-zinc-700 text-tiny font-lora'>{email} with {provider}</span>
+                    <span className="text-zinc-700 font-lora">{id}</span>
                 </div>
                 <div className="mx-5">
                     <Button onPress={handleLogout} isLoading={isLoadingL} className="w-full" variant="ghost">

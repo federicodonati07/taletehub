@@ -5,6 +5,7 @@ import { Textarea } from '@nextui-org/input';
 import supabase from '@/supabase/client';
 import Image from 'next/image';
 import { Avatar } from '@nextui-org/avatar';
+import {Switch} from "@nextui-org/switch";
 
 type Props = {
     id: string;
@@ -16,6 +17,7 @@ const NewUser = ({ id }: Props) => {
     const [picture, setPicture] = useState<string>()
     const [bio, setBio] = useState<string>()
     const [ig, setIg] = useState<string>()
+    const [privateValue, setPrivate] = useState<boolean>()
     
     const [image, setImage] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
@@ -39,12 +41,15 @@ const NewUser = ({ id }: Props) => {
                 const oldPicture = usernameData![0].picture
                 const oldIg = usernameData![0].ig
                 const oldBio = usernameData![0].bio
+                const oldPrivate = usernameData![0].private
 
                 setUsername(oldUsername)
                 setStart(oldStart)
                 setPicture(`${oldPicture}?t=${new Date().getTime()}`);
                 setIg(oldIg)
                 setBio(oldBio)
+                setPrivate(oldPrivate)
+                console.log(oldPrivate)
             }
             
         }
@@ -118,7 +123,8 @@ const NewUser = ({ id }: Props) => {
                     ig: newIg || ig,
                     bio: newBio || bio,
                     picture: profileImageUrl, // Aggiungi l'URL dell'immagine
-                    start: false
+                    start: false,
+                    private: privateValue
                 })
                 .eq('uuid', id);
 
@@ -136,7 +142,8 @@ const NewUser = ({ id }: Props) => {
                     username: newUsername || username, // Se vuoto, imposta il nome predefinito
                     ig: newIg || ig,
                     bio: newBio || bio,
-                    start: false
+                    start: false,
+                    private: privateValue
                 })
                 .eq('uuid', id);
 
@@ -149,6 +156,10 @@ const NewUser = ({ id }: Props) => {
         }
     };
 
+    const handleChangePrivate = ()=>{
+        setPrivate(!privateValue)
+    }
+
     return (
         <div className="flex flex-col text-center justify-center items-center">
             <span className="font-poppins font-bold text-4xl text-center mb-4">
@@ -158,7 +169,6 @@ const NewUser = ({ id }: Props) => {
                 <div>
                     <span className="text-xl font-bold font-lora">Username</span>
                     <Input
-                        isClearable
                         label="Username"
                         className="max-w-xs font-poppins"
                         type="text"
@@ -171,7 +181,6 @@ const NewUser = ({ id }: Props) => {
                 <div className="mt-5">
                     <span className="text-xl font-bold font-lora">Tag Instagram</span>
                     <Input
-                        isClearable
                         className="max-w-xs font-poppins"
                         label="Tag Instagram"
                         type="text"
@@ -191,7 +200,7 @@ const NewUser = ({ id }: Props) => {
                         maxLength={250}
                     ></Textarea>
                 </div>
-                <div className="mt-5">
+                <div className="mt-5 grid grid-cols-2 gap-2">
                     <div className="flex flex-col text-center justify-center items-center">
                         <span className="text-xl font-bold font-lora">Immagine Profilo</span>
                         <div className="relative">
@@ -225,6 +234,12 @@ const NewUser = ({ id }: Props) => {
                                 <Avatar size='lg' src={picture}></Avatar>
                             )}
                         </div>
+                    </div>
+                    <div className='flex flex-col text-center justify-center items-center '>
+                         <span className="text-xl font-bold font-lora mb-2">Privacy del Profilo</span>
+                         <Switch className='mt-5' isSelected={privateValue} onChange={handleChangePrivate}>
+                            <span className='font-bold font-lora'>Privato</span>
+                        </Switch>
                     </div>
                 </div>
             </div>
