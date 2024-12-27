@@ -6,6 +6,7 @@ import { IoHomeOutline, IoHomeSharp } from "react-icons/io5";
 import Home from "./Home";
 import User from "./User";
 import supabase from "@/supabase/client";
+import Search from "./(Search)/Search";
 
 const Logged = () => {
   const [activeSection, setActiveSection] = useState("home");
@@ -47,7 +48,8 @@ const Logged = () => {
                 status: "unverified",
                 shadow_banned: false,
                 ig:"",
-                start: true
+                start: true,
+                private: false
               })
               .single()
 
@@ -69,9 +71,9 @@ const Logged = () => {
       <div className="min-h-screen flex flex-col m-2">
         {/* Contenuto principale */}
         <div className="flex justify-center">
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full max-w-4xl mx-auto overflow-hidden">
             {activeSection === "home" && <Home />}
-            {activeSection === "search" && <div>Search Section</div>}
+            {activeSection === "search" && <Search />}
             {activeSection === "add" && <div>Add Section</div>}
             {activeSection === "user" && <User />}
           </div>

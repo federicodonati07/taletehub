@@ -223,7 +223,7 @@ const User = () => {
             <div className={`${isEditing ? "block" : "hidden"} absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-full max-w-4xl max-h-screen`}>
                 <NewUser id={String(id)}></NewUser>
             </div>
-            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-full max-w-4xl max-h-screen ${isEditing ? "hidden":"block"} ${startNew ? "hidden" : "block"}`}>
+            <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-max max-w-4xl max-h-screen ${isEditing ? "hidden":"block"} ${startNew ? "hidden" : "block"}`}>
                 {/* Avatar Section */}
                 <div className="flex flex-row justify-center items-center text-center mb-6">
                     <div>

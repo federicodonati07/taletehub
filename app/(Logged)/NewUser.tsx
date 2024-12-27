@@ -12,6 +12,7 @@ type Props = {
 };
 
 const NewUser = ({ id }: Props) => {
+    
     const [username, setUsername] = useState<string>()
     const [start, setStart] = useState<boolean>()
     const [picture, setPicture] = useState<string>()
@@ -22,10 +23,13 @@ const NewUser = ({ id }: Props) => {
     const [image, setImage] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [existingUsername, setExistingUsername] = useState(false);
+    const [notValidUsername, setNotvalidUsername] = useState(false)
     const [newUsername, setNewUsername] = useState<string>('');
     const [newIg, setNewIg] = useState<string>('');
     const [newBio, setNewBio] = useState<string>('');
+
     const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [isDisabled, setIsDisabled] = useState<boolean>(false)
 
     useEffect(()=>{
         const getUsername = async()=>{
@@ -68,6 +72,7 @@ const NewUser = ({ id }: Props) => {
 
     const handleUsernameChange = async (event: string) => {
         const value = event;
+        const regex = /^[a-zA-Z0-9._]+$/
 
         const { data } = await supabase
             .from('users')
@@ -76,9 +81,27 @@ const NewUser = ({ id }: Props) => {
 
         if (data && data.length > 0) {
             setExistingUsername(true);
+            setIsDisabled(true)
         } else {
             setExistingUsername(false);
-            setNewUsername(value);
+
+            if(value == ""){
+                setIsDisabled(false)
+                setNotvalidUsername(false)
+                setNewUsername(value)
+            }else{
+                if(regex.test(value)){
+                    setNotvalidUsername(false)
+                    setIsDisabled(false)
+                    setNewUsername(value)
+                    
+                }else{
+                    setNotvalidUsername(true)
+                    setIsDisabled(true)
+                }
+            }
+
+            console.log(value)
         }
     };
 
@@ -175,8 +198,12 @@ const NewUser = ({ id }: Props) => {
                         variant="bordered"
                         placeholder={username}
                         onChange={(e) => handleUsernameChange(e.target.value)}
-                        color={existingUsername ? 'danger' : 'default'}
+                        color={existingUsername || notValidUsername ? 'danger' : 'default'}
                     />
+                    {existingUsername ||  notValidUsername ? (
+                        <span className='text-tiny text-red-500'>nome utente non valido o già esistente</span>
+                    ) : ""}
+                    
                 </div>
                 <div className="mt-5">
                     <span className="text-xl font-bold font-lora">Tag Instagram</span>
@@ -244,7 +271,7 @@ const NewUser = ({ id }: Props) => {
                 </div>
             </div>
 
-            <Button isLoading={isLoading} className="mt-10 bg-slate-50 text-black font-bold font-poppins" variant="solid" onPress={handleSubmit}>
+            <Button isDisabled={isDisabled} isLoading={isLoading} className="mt-10 bg-slate-50 text-black font-bold font-poppins" variant="solid" onPress={handleSubmit}>
                 {start ? "Continua" : "Salva"}
             </Button>
         </div>
