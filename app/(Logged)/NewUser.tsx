@@ -42,7 +42,7 @@ const NewUser = ({ id }: Props) => {
 
                 setUsername(oldUsername)
                 setStart(oldStart)
-                setPicture(oldPicture)
+                setPicture(`${oldPicture}?t=${new Date().getTime()}`);
                 setIg(oldIg)
                 setBio(oldBio)
             }

@@ -14,6 +14,7 @@ import {Popover, PopoverContent, PopoverTrigger} from "@nextui-org/popover"
 import { MdModeEdit } from "react-icons/md";
 import { FaShare } from "react-icons/fa";
 import Image from 'next/image';
+import toast, { Toaster } from 'react-hot-toast';
 
 const User = () => {
     const [image, setImage] = useState<string | null>(null)
@@ -62,7 +63,7 @@ const User = () => {
             
             setUsername(data![0].username)
             setStatus(data![0].status);
-            setPicture(data![0].picture);
+            setPicture(`${data![0].picture}?t=${new Date().getTime()}`);
             setBio(data![0].bio);
             setShadowBanned(data![0].shadow_banned);
             setLike(data![0].likes);
@@ -161,55 +162,58 @@ const User = () => {
         setFileImage(null)
     }
 
-    const handleSubmitNewImage = async()=>{
-        setIsloading(true)
-        if(fileImage){
-            const {error: errorUpdateImage} = await supabase.storage
+    const handleSubmitNewImage = async () => {
+        setIsloading(true);
+        if (fileImage) {
+            const { error: errorUpdateImage } = await supabase.storage
                 .from("UserProfilePicture")
                 .upload(`${id}/avatar/avatar`, fileImage, {
                     cacheControl: "3600",
-                    upsert: true
-                })
-            
-            const {data: publicUrlData} = await supabase.storage
+                    upsert: true,
+                });
+
+            const { data: publicUrlData } = await supabase.storage
                 .from("UserProfilePicture")
-                .getPublicUrl(`${id}/avatar/avatar`)
+                .getPublicUrl(`${id}/avatar/avatar`);
 
-            const publicUrlImage = publicUrlData.publicUrl
+            const publicUrlImage = publicUrlData.publicUrl;
 
-            const {error: errorUpdateUser}  = await supabase
+            const { error: errorUpdateUser } = await supabase
                 .from("users")
                 .update({
-                    picture: publicUrlImage
+                    picture: publicUrlImage,
                 })
-                .eq("uuid", id)
+                .eq("uuid", id);
 
-            if(errorUpdateImage || errorUpdateUser){
-                console.log("errore: ", errorUpdateImage, errorUpdateUser)
-            }else{
-                setPicture(publicUrlImage)
-                setIsloading(false)
+            if (errorUpdateImage || errorUpdateUser) {
+                console.log("errore: ", errorUpdateImage, errorUpdateUser);
+            } else {
+                toast.success("Immagine profilo aggiornata");
+                // Aggiungi un timestamp univoco all'immagine per evitare il caching
+                setPicture(`${publicUrlImage}?t=${new Date().getTime()}`);
+                setIsloading(false);
             }
-        }else{
-            const {error: errorDeleteImage} = await supabase.storage
+        } else {
+            const { error: errorDeleteImage } = await supabase.storage
                 .from("UserProfilePicture")
-                .remove([`${id}/avatar/avatar`])  
-                
-            const {error: errorUpdateUser} = await supabase
+                .remove([`${id}/avatar/avatar`]);
+
+            const { error: errorUpdateUser } = await supabase
                 .from("users")
                 .update({
                     picture: "",
                 })
-                .eq("uuid", id)
+                .eq("uuid", id);
 
-            if(errorDeleteImage || errorUpdateUser){
+            if (errorDeleteImage || errorUpdateUser) {
                 console.log("errore: ", errorDeleteImage, errorUpdateUser);
-            }else{
-                setPicture("")
-                setIsloading(false)
+            } else {
+                toast.success("Immagine profilo aggiornata");
+                setPicture("");
+                setIsloading(false);
             }
         }
-    }
+    };
 
     return(
         <>
@@ -400,6 +404,10 @@ const User = () => {
                     </Dropdown>
                 </div>
             </div>
+
+            <Toaster
+                position="top-center"
+            />
         </>
     )
 };
