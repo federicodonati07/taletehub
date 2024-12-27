@@ -13,8 +13,13 @@ import { CiCircleInfo } from "react-icons/ci";
 import {Popover, PopoverContent, PopoverTrigger} from "@nextui-org/popover"
 import { MdModeEdit } from "react-icons/md";
 import { FaShare } from "react-icons/fa";
+import Image from 'next/image';
 
 const User = () => {
+    const [image, setImage] = useState<string | null>(null)
+    const [fileImage,setFileImage] = useState<File | null>(null)
+    const [isLoading, setIsloading] = useState<boolean>(false)
+
     const [isEditing, setIsEditing] = useState(false)
 
     const [isLoadingL, setIsLoadingL] = useState(false);
@@ -94,7 +99,7 @@ const User = () => {
             }
             if(!files || files.length === 0){
                 console.log("no files found in the folder")
-                return
+                window.location.reload();
             }
 
             const paths: string[] = []
@@ -141,6 +146,71 @@ const User = () => {
         setIsEditing(true)
     }
 
+    const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>)=>{
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = () => setImage(reader.result as string);
+            reader.readAsDataURL(file);
+            setFileImage(file);
+        }
+    }
+
+    const handleClearInput = ()=>{
+        setImage(null); // Resetta la preview dell'immagine
+        setFileImage(null)
+    }
+
+    const handleSubmitNewImage = async()=>{
+        setIsloading(true)
+        if(fileImage){
+            const {error: errorUpdateImage} = await supabase.storage
+                .from("UserProfilePicture")
+                .upload(`${id}/avatar/avatar`, fileImage, {
+                    cacheControl: "3600",
+                    upsert: true
+                })
+            
+            const {data: publicUrlData} = await supabase.storage
+                .from("UserProfilePicture")
+                .getPublicUrl(`${id}/avatar/avatar`)
+
+            const publicUrlImage = publicUrlData.publicUrl
+
+            const {error: errorUpdateUser}  = await supabase
+                .from("users")
+                .update({
+                    picture: publicUrlImage
+                })
+                .eq("uuid", id)
+
+            if(errorUpdateImage || errorUpdateUser){
+                console.log("errore: ", errorUpdateImage, errorUpdateUser)
+            }else{
+                setPicture(publicUrlImage)
+                setIsloading(false)
+            }
+        }else{
+            const {error: errorDeleteImage} = await supabase.storage
+                .from("UserProfilePicture")
+                .remove([`${id}/avatar/avatar`])  
+                
+            const {error: errorUpdateUser} = await supabase
+                .from("users")
+                .update({
+                    picture: "",
+                })
+                .eq("uuid", id)
+
+            if(errorDeleteImage || errorUpdateUser){
+                console.log("errore: ", errorDeleteImage, errorUpdateUser);
+            }else{
+                setPicture("")
+                setIsloading(false)
+            }
+        }
+    }
+
     return(
         <>
             <div className={`${startNew ? "block" : "hidden"} absolute top-0 left-1/2 transform -translate-x-1/2 text-center m-2 p-4 w-full max-w-4xl max-h-screen`}>
@@ -153,14 +223,59 @@ const User = () => {
                 {/* Avatar Section */}
                 <div className="flex flex-row justify-center items-center text-center mb-6">
                     <div>
-                        <Avatar size="lg" src={picture} className="cursor-pointer" />
+                        <Popover showArrow={true} onOpenChange={handleClearInput}>
+                            <PopoverTrigger>
+                                <Avatar size="lg" src={picture} className="cursor-pointer"/>
+                            </PopoverTrigger>
+                            <PopoverContent>
+                                <div className="px-1 py-2">
+                                    <div className="font-poppins text-xl font-bold text-white flex justify-center items-center text-center m-2">
+                                        Cambia Immagine Profilo
+                                    </div>
+                                    <div className="text-tiny text-white flex flex-col justify-center items-center text-center">
+                                        <input 
+                                            type="file" 
+                                            accept='image/*'
+                                            id="image-upload"
+                                            className='hidden'
+                                            onChange={handleImageChange}
+                                        />
+                                        <label 
+                                            htmlFor="image-upload"
+                                            className='border rounded-full flex flex-col justify-center items-center text-center cursor-pointer overflow-hidden w-16 h-16 relative'
+                                            title={image? "Clicca per cambiare immagine" : "Clicca per caricare immagine"}
+                                        >
+                                            {image ? (
+                                                <Image
+                                                    src={image}
+                                                    alt="Anteprima Immagine"
+                                                    layout="fill"
+                                                    objectFit="cover"
+                                                />
+                                            ):(
+                                                <>
+                                                    <Avatar size="lg" src=""></Avatar>
+                                                </>
+                                            )}
+                                        </label>
+                                        <span className='text-tiny m-2 mt-5 font-bold font-lora'>
+                                            Elimina la tua immagine profilo senza inserirne una nuova
+                                        </span>
+                                        <Button isLoading={isLoading} className="bg-slate-50 text-black font-bold font-poppins" variant="solid" onPress={()=>handleSubmitNewImage()}>
+                                            Salva
+                                        </Button>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                        
                     </div>
                     <div className='flex flex-row'>
                         <span className="text-2xl font-bold font-poppins ml-4 text-white">
                             {username}
                         </span>
                         
-                        <Popover placement="bottom" showArrow={true} color={status == "verified" ? "primary" : status == "admin" ? "success" : ""} >
+                        <Popover placement="bottom" showArrow={true} color={status == "verified" ? "primary" : status == "admin" ? "success" : "default"} >
                             <PopoverTrigger>
                                 <span>
                                     {status == "verified" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-blue-500 cursor-pointer'/>): status == "admin" ? (<RiVerifiedBadgeFill className='text-4xl font-bold text-emerald-500 cursor-pointer'/>) : ("")}
