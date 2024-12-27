@@ -100,8 +100,6 @@ const NewUser = ({ id }: Props) => {
                     setIsDisabled(true)
                 }
             }
-
-            console.log(value)
         }
     };
 
@@ -199,6 +197,7 @@ const NewUser = ({ id }: Props) => {
                         placeholder={username}
                         onChange={(e) => handleUsernameChange(e.target.value)}
                         color={existingUsername || notValidUsername ? 'danger' : 'default'}
+                        maxLength={20}
                     />
                     {existingUsername ||  notValidUsername ? (
                         <span className='text-tiny text-red-500'>nome utente non valido o già esistente</span>
@@ -214,6 +213,7 @@ const NewUser = ({ id }: Props) => {
                         variant="bordered"
                         placeholder={ig == "" ? "Username Instagram" : ig}
                         onChange={(e) => handleIgChange(e.target.value)}
+                        maxLength={30}
                     />
                 </div>
                 <div className="mt-5">
@@ -224,7 +224,7 @@ const NewUser = ({ id }: Props) => {
                         variant="bordered"
                         placeholder={bio == "" ? "Descriviti" : bio}
                         onChange={(e) => handleBioChange(e.target.value)}
-                        maxLength={250}
+                        maxLength={50}
                     ></Textarea>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2">

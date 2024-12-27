@@ -365,18 +365,20 @@ const User = () => {
                 ):("")}
                 <div className="flex flex-col items-start justify-start text-left mt-10 mb-10">
                     <div className="flex flex-col">
-                        <div className='grid grid-cols-2 gap-2'>
+                        <div className='grid grid-cols-2'>
                             <span className="text-xl font-bold font-poppins">{ns}</span>
                             {igLink == "" ? ("") : (
                                 <>
                                     <Button variant="light" onPress={handleIgLink}>
                                             <FaInstagram className='font-bold text-lg'/>
-                                            <span className='font-bold font-lora'>{igLink}</span>
+                                            <span className='font-bold font-lora truncate w-28'>{igLink}</span>
                                     </Button>
                                 </>
                             )}
                         </div>
-                        <span className="font-lora">{bio}</span>
+                        <div className='grid grid-cols-1'>
+                            <span className="font-lora text-pretty">{bio}</span>
+                        </div>
                     </div>
                 </div>
 
