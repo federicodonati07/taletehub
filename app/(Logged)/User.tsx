@@ -34,15 +34,33 @@ const User = () => {
     const [picture, setPicture] = useState<string>();
     const [bio, setBio] = useState<string>();
     const [shadowBanned, setShadowBanned] = useState<boolean>();
-    const [likes, setLike] = useState();
-    const [followers, setFollowers] = useState();
-    const [following, setFollowing] = useState();
     const [igLink, setIgLink] = useState<string>()
     const [startNew, setStartNew] = useState<boolean>()
+
+    const [following, setFollowing] = useState<number>()
+    const [followers, setFollower] = useState<number>()
     
 
 
     useEffect(() => {
+        const fetchFollowingFollower = async()=>{
+            const {data: followingData} = await supabase
+                .from("follow")
+                .select()
+                .eq("user", username)
+                .eq("status", "accepted")
+
+            const {data: followersData} = await supabase
+                .from("follow")
+                .select()
+                .eq("following_user", username)
+                .eq("status", "accepted")
+
+            setFollowing(followingData?.length)
+            setFollower(followersData?.length)
+        
+        }
+
         const getSessionInfo = async () => {
             const { data: { session } } = await supabase.auth.getSession();
 
@@ -66,15 +84,13 @@ const User = () => {
             setPicture(`${data![0].picture}?t=${new Date().getTime()}`);
             setBio(data![0].bio);
             setShadowBanned(data![0].shadow_banned);
-            setLike(data![0].likes);
-            setFollowers(data![0].followers);
-            setFollowing(data![0].following);
             setIgLink(data![0].ig);
             setStartNew(data![0].start)
         };
 
         getSessionInfo();
-    }, []);
+        fetchFollowingFollower()
+    }, [username]);
 
     const handleLogout = async () => {
         setIsLoadingL(true);
@@ -307,7 +323,7 @@ const User = () => {
                         <span className="font-lora text-lg">Likes</span>
                         <div className="flex flex-row items-center justify-center">
                             <span className="font-poppins font-bold text-3xl">
-                                <AnimatedCounter from={0} to={Number(likes)} />
+                                <AnimatedCounter from={0} to={0} />
                             </span>
                         </div>
                     </div>
