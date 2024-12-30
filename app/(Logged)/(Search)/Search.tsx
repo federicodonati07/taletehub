@@ -1,53 +1,54 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'; 
 import { Input } from '@nextui-org/input';
 import { IoSearchOutline } from "react-icons/io5";
 import supabase from '@/supabase/client';
 import { useDebounce } from 'use-debounce'; // Per il debounce
-import { User } from "@nextui-org/user";
 import { Avatar } from '@nextui-org/avatar';
 import { Button } from '@nextui-org/button';
 import { RiVerifiedBadgeFill } from "react-icons/ri";
-import { Popover, PopoverTrigger, PopoverContent} from "@nextui-org/popover"
+import { Popover, PopoverTrigger, PopoverContent } from "@nextui-org/popover";
 
-// Definisci un tipo per l'utente
+// Definizione del tipo User
 interface User {
     id: string;
     username: string;
     picture: string;
     bio: string;
     status: string;
+    shadow_banned: boolean;
+    follow_status: string; // Valori possibili: 'accepted', 'requested', 'none'
 }
 
 const Search = () => {
     const [searchValue, setSearchValue] = useState<string>("");
-    const [searchResults, setSearchResults] = useState<User[]>([]); // Usa il tipo User[]
+    const [searchResults, setSearchResults] = useState<User[]>([]);
     const [notFound, setNotFound] = useState<boolean>(true);
-    const [debouncedSearchValue] = useDebounce(searchValue, 500); // Debounce di 500ms
+    const [debouncedSearchValue] = useDebounce(searchValue, 500);
     const [myUsername, setMyUsername] = useState<string>("");
 
-    // Funzione per ottenere l'ID dell'utente attualmente loggato
+    // Ottieni lo username dell'utente loggato
     useEffect(() => {
         const fetchMyUsername = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             const id = session?.user.id;
 
             if (id) {
-                const {data} = await supabase
+                const { data } = await supabase
                     .from("users")
-                    .select()
+                    .select("username")
                     .eq("uuid", id)
+                    .single();
 
-                setMyUsername(data![0].username)
+                if (data) setMyUsername(data.username);
             }
         };
+
         fetchMyUsername();
-    }, []); // Lo stato `myUserId` viene caricato una sola volta
+    }, []);
 
-    // Effettua la ricerca ogni volta che il valore della ricerca cambia e solo quando myUserId è disponibile
+    // Effettua la ricerca ogni volta che il valore cambia
     useEffect(() => {
-        if (!myUsername) return; // Non eseguire la ricerca se myUserId non è ancora disponibile
-
-        if (debouncedSearchValue === "") {
+        if (!myUsername || debouncedSearchValue === "") {
             setSearchResults([]);
             setNotFound(true);
             return;
@@ -58,33 +59,141 @@ const Search = () => {
                 const { data, error } = await supabase
                     .from("users")
                     .select()
-                    .ilike("username", `%${debouncedSearchValue}%`);  // Usa "ilike" per la ricerca case-insensitive
+                    .ilike("username", `%${debouncedSearchValue}%`);
 
                 if (error) throw error;
 
                 if (data?.length > 0) {
-                    // Filtra per escludere l'utente loggato
-                    const filteredResults = data.filter((user: User) => user.id !== myUsername);
-                    setSearchResults(filteredResults);
+                    const filteredResults = data.filter((user: User) => user.username !== myUsername);
 
-                    if (filteredResults.length > 0) {
-                        setNotFound(false);
-                    } else {
-                        setNotFound(true);
-                    }
+                    const updatedResults = await Promise.all(
+                        filteredResults.map(async (user: User) => {
+                            const { data: followData } = await supabase
+                                .from("follow")
+                                .select("status")
+                                .eq("user", myUsername)
+                                .eq("following_user", user.username)
+                                .single();
+
+                            return {
+                                ...user,
+                                follow_status: followData?.status || "none", // Valore predefinito 'none'
+                            };
+                        })
+                    );
+
+                    setSearchResults(updatedResults);
+                    setNotFound(updatedResults.length === 0);
                 } else {
                     setSearchResults([]);
                     setNotFound(true);
                 }
-
-                console.log(data);
             } catch (error) {
                 console.error("Errore nella ricerca:", error);
             }
         };
 
         fetchResults();
-    }, [debouncedSearchValue, myUsername]); // Dipende sia dal valore di ricerca che dall'ID dell'utente
+    }, [debouncedSearchValue, myUsername]);
+
+    // Gestisci il clic sul pulsante "Non seguire più"
+    const handleUnfollowClicked = async (username: string) => {
+        try {
+            // Elimina la riga corrispondente dalla tabella 'follow'
+            const { error } = await supabase
+                .from("follow")
+                .delete()
+                .eq("user", myUsername)
+                .eq("following_user", username);
+
+            if (error) {
+                console.error("Errore durante la rimozione del follow:", error);
+                return;
+            }
+
+            // Aggiorna lo stato di follow per l'utente nella lista dei risultati di ricerca
+            setSearchResults(prevResults => 
+                prevResults.map(user =>
+                    user.username === username
+                        ? { ...user, follow_status: "none" }
+                        : user
+                )
+            );
+        } catch (err) {
+            console.error("Errore durante la gestione dell'unfollow:", err);
+        }
+    };
+
+    // Gestisci il clic sul pulsante "Segui"
+    const handleFollowClicked = async (username: string) => {
+        try {
+            const { data: privateCheck, error } = await supabase
+                .from("users")
+                .select("private")
+                .eq("username", username);
+
+            if (error) throw error;
+
+            let newStatus = 'none';
+            if (privateCheck && privateCheck.length > 0) {
+                const isPrivate = privateCheck[0].private;
+
+                if (isPrivate) {
+                    await supabase
+                        .from("follow")
+                        .insert({ user: myUsername, following_user: username, status: "requested" });
+                    newStatus = 'requested';
+                } else {
+                    await supabase
+                        .from("follow")
+                        .insert({ user: myUsername, following_user: username, status: "accepted" });
+                    newStatus = 'accepted';
+                }
+            } else {
+                console.error("Errore: utente non trovato o campo 'private' mancante.");
+            }
+
+            // Aggiorna lo stato di follow per l'utente nella lista dei risultati di ricerca
+            setSearchResults(prevResults => 
+                prevResults.map(user =>
+                    user.username === username
+                        ? { ...user, follow_status: newStatus }
+                        : user
+                )
+            );
+        } catch (err) {
+            console.error("Errore durante la gestione del follow:", err);
+        }
+    };
+
+    // Gestisci il clic sul pulsante "Richiesta inviata"
+    const handleRequestSentClicked = async (username: string) => {
+        try {
+            // Elimina la riga corrispondente con status 'requested'
+            const { error } = await supabase
+                .from("follow")
+                .delete()
+                .eq("user", myUsername)
+                .eq("following_user", username)
+                .eq("status", "requested");
+
+            if (error) {
+                console.error("Errore durante la cancellazione della richiesta:", error);
+                return;
+            }
+
+            // Aggiorna lo stato nella lista dei risultati di ricerca
+            setSearchResults(prevResults => 
+                prevResults.map(user =>
+                    user.username === username
+                        ? { ...user, follow_status: "none" }
+                        : user
+                )
+            );
+        } catch (err) {
+            console.error("Errore durante la gestione della richiesta inviata:", err);
+        }
+    };
 
     const handleSearchValue = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(e.target.value);
@@ -108,45 +217,49 @@ const Search = () => {
 
             <div className='flex flex-col justify-center items-center mt-20 mx-2 overflow-y-scroll'>
                 {notFound ? (
-                    <span className='text-2xl font-bold font-poppins'>
-                        Nessun Risultato
-                    </span>
+                    <span className='text-2xl font-bold font-poppins'>Nessun Risultato</span>
                 ) : (
                     <ul className="list-none p-0">
-                        {searchResults.filter((user)=>user.username != myUsername).map((user: User) => (
-                            <li key={user.id} className="text-xl font-poppins">
+                        {searchResults.map((user) => (
+                            <li key={user.id} className="text-xl font-poppins cursor-pointer">
                                 <div className='flex flex-row space-x-3 p-2'>
-                                    <Avatar 
-                                        src={`${user.picture}?t=${new Date().getTime()}`}
-                                        size="md"
-                                        className='mt-1'
-                                    />
+                                    <Avatar src={`${user.picture}?t=${new Date().getTime()}`} size="md" className='mt-1' />
                                     <div className='flex flex-col mx-2'>
                                         <div className='flex flex-row'>
                                             <span className='font-lora'>{user.username}</span>
-                                            <Popover placement="bottom" showArrow={true} color={user.status == "verified" ? "primary" : user.status == "admin" ? "success" : "default"} >
-                                                <PopoverTrigger>
-                                                    <span>
-                                                        {user.status == "verified" ? (<RiVerifiedBadgeFill className='text-xl m-1 font-bold text-blue-500 cursor-pointer'/>): user.status == "admin" ? (<RiVerifiedBadgeFill className='text-xl m-1 font-bold text-emerald-500 cursor-pointer'/>) : ("")}
-                                                    </span>
-                                                </PopoverTrigger>
-                                                <PopoverContent>
-                                                    <div className="px-1 py-2">
-                                                        <div className="text-small font-bold text-white">
-                                                            {user.status == "verified" ? "Account Verificato" : user.status == "admin" ? "Account Amministratore" : ""}
+                                            {user.status === "verified" && (
+                                                <Popover placement="bottom" showArrow={true}>
+                                                    <PopoverTrigger>
+                                                        <div>
+                                                            <RiVerifiedBadgeFill className='text-xl m-1 font-bold text-blue-500 cursor-pointer' />
                                                         </div>
-                                                        <div className="text-tiny text-white">
-                                                            {user.status == "verified" ? "Account verificato da un Amministratore" : user.status == "admin" ? "Account appartenente a un amministratore" : ""}
+                                                    </PopoverTrigger>
+                                                    <PopoverContent>
+                                                        <div className="px-1 py-2">
+                                                            <span className="text-small font-bold text-white">Account Verificato</span>
                                                         </div>
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            )}
                                         </div>
-                                        
                                         <span className='text-sm font-lora text-zinc-500 truncate w-28'>{user.bio}</span>
                                     </div>
                                     <div className='absolute right-2'>
-                                        <Button color="primary">Segui</Button>
+                                        <Button
+                                            color={user.follow_status === "accepted" ? "default" : "primary"}
+                                            variant={user.follow_status === "requested" ? "bordered" : "solid"}
+                                            onPress={() => {
+                                                if (user.follow_status === "accepted") {
+                                                    handleUnfollowClicked(user.username);
+                                                } else if (user.follow_status === "requested") {
+                                                    handleRequestSentClicked(user.username);
+                                                } else {
+                                                    handleFollowClicked(user.username);
+                                                }
+                                            }}
+                                        >
+                                            {user.follow_status === "accepted" ? "Non seguire più" : user.follow_status === "requested" ? "Richiesta inviata" : "Segui"}
+                                        </Button>
                                     </div>
                                 </div>
                             </li>
