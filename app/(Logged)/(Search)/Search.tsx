@@ -20,7 +20,7 @@ interface User {
 }
 
 const Search = () => {
-    const [searchValue, setSearchValue] = useState<string>("");
+    const [searchValue, setSearchValue] = useState<string>(""); 
     const [searchResults, setSearchResults] = useState<User[]>([]);
     const [notFound, setNotFound] = useState<boolean>(true);
     const [debouncedSearchValue] = useDebounce(searchValue, 500);
@@ -219,52 +219,68 @@ const Search = () => {
                 {notFound ? (
                     <span className='text-2xl font-bold font-poppins'>Nessun Risultato</span>
                 ) : (
-                    <ul className="list-none p-0">
-                        {searchResults.map((user) => (
-                            <li key={user.id} className="text-xl font-poppins cursor-pointer">
-                                <div className='flex flex-row space-x-3 p-2'>
-                                    <Avatar src={`${user.picture}?t=${new Date().getTime()}`} size="md" className='mt-1' />
-                                    <div className='flex flex-col mx-2'>
-                                        <div className='flex flex-row'>
-                                            <span className='font-lora'>{user.username}</span>
-                                            {user.status === "verified" && (
-                                                <Popover placement="bottom" showArrow={true}>
-                                                    <PopoverTrigger>
-                                                        <div>
-                                                            <RiVerifiedBadgeFill className='text-xl m-1 font-bold text-blue-500 cursor-pointer' />
-                                                        </div>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent>
-                                                        <div className="px-1 py-2">
-                                                            <span className="text-small font-bold text-white">Account Verificato</span>
-                                                        </div>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            )}
+                    <>
+                        <span className='text-md text-zinc-500 font-poppins mb-4 text-left'>{searchResults.length} Utenti Trovati</span>
+                        <ul className="list-none p-0">
+                            {searchResults.map((user) => (
+                                <li key={user.id} className="text-xl font-poppins cursor-pointer">
+                                    <div className='flex flex-row space-x-3 p-2'>
+                                        <Avatar src={`${user.picture}?t=${new Date().getTime()}`} size="md" className='mt-1' />
+                                        <div className='flex flex-col mx-2'>
+                                            <div className='flex flex-row'>
+                                                <span className='font-lora'>{user.username}</span>
+                                                {user.status === "verified" ? (
+                                                    <Popover placement="bottom" showArrow={true}>
+                                                        <PopoverTrigger>
+                                                            <div>
+                                                                <RiVerifiedBadgeFill className='text-xl m-1 font-bold text-blue-500 cursor-pointer' />
+                                                            </div>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent>
+                                                            <div className="px-1 py-2">
+                                                                <span className="text-small font-bold text-white">Account Verificato</span>
+                                                            </div>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                ) : user.status === "admin" && (
+                                                    <Popover placement="bottom" showArrow={true}>
+                                                        <PopoverTrigger>
+                                                            <div>
+                                                                <RiVerifiedBadgeFill className='text-xl m-1 font-bold text-emerald-500 cursor-pointer' />
+                                                            </div>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent>
+                                                            <div className="px-1 py-2">
+                                                                <span className="text-small font-bold text-white">Account Amministratore</span>
+                                                            </div>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                )}
+                                            </div>
+                                            <span className='text-sm font-lora text-zinc-500 truncate w-28'>{user.bio}</span>
                                         </div>
-                                        <span className='text-sm font-lora text-zinc-500 truncate w-28'>{user.bio}</span>
+                                        <div className='absolute right-2'>
+                                            <Button
+                                                color={user.follow_status === "accepted" ? "default" : "primary"}
+                                                variant={user.follow_status === "requested" ? "bordered" : "solid"}
+                                                onPress={() => {
+                                                    if (user.follow_status === "accepted") {
+                                                        handleUnfollowClicked(user.username);
+                                                    } else if (user.follow_status === "requested") {
+                                                        handleRequestSentClicked(user.username);
+                                                    } else {
+                                                        handleFollowClicked(user.username);
+                                                    }
+                                                }}
+                                            >
+                                                {user.follow_status === "accepted" ? "Non seguire più" : user.follow_status === "requested" ? "Richiesta inviata" : "Segui"}
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className='absolute right-2'>
-                                        <Button
-                                            color={user.follow_status === "accepted" ? "default" : "primary"}
-                                            variant={user.follow_status === "requested" ? "bordered" : "solid"}
-                                            onPress={() => {
-                                                if (user.follow_status === "accepted") {
-                                                    handleUnfollowClicked(user.username);
-                                                } else if (user.follow_status === "requested") {
-                                                    handleRequestSentClicked(user.username);
-                                                } else {
-                                                    handleFollowClicked(user.username);
-                                                }
-                                            }}
-                                        >
-                                            {user.follow_status === "accepted" ? "Non seguire più" : user.follow_status === "requested" ? "Richiesta inviata" : "Segui"}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                                </li>
+                            ))}
+                        </ul>
+                    </>
                 )}
             </div>
         </div>

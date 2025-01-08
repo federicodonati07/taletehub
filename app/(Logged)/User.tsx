@@ -15,6 +15,14 @@ import { MdModeEdit } from "react-icons/md";
 import { FaShare } from "react-icons/fa";
 import Image from 'next/image';
 import toast, { Toaster } from 'react-hot-toast';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  useDisclosure,
+} from "@nextui-org/drawer";
 
 const User = () => {
     const [image, setImage] = useState<string | null>(null)
@@ -40,6 +48,12 @@ const User = () => {
     const [following, setFollowing] = useState<number>()
     const [followers, setFollower] = useState<number>()
     
+
+    const {isOpen, onOpen, onOpenChange} = useDisclosure();
+    const handleOpen = () => {
+        onOpen();
+    };
+
 
 
     useEffect(() => {
@@ -329,7 +343,7 @@ const User = () => {
                     </div>
 
                     {/* Followers Section */}
-                    <div className="flex flex-col justify-center items-center bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg text-white hover:shadow-lg transition-all duration-300 flex-1 cursor-pointer">
+                    <div className="flex flex-col justify-center items-center bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg text-white hover:shadow-lg transition-all duration-300 flex-1 cursor-pointer" onClick={handleOpen}>
                         <span className="font-lora text-lg">Followers</span>
                         <div className="flex flex-row items-center justify-center">
                             <span className="font-poppins font-bold text-3xl">
@@ -423,6 +437,36 @@ const User = () => {
                     </Dropdown>
                 </div>
             </div>
+
+            <Drawer isOpen={isOpen} placement="bottom" onOpenChange={onOpenChange} >
+                <DrawerContent>
+                {(onClose) => (
+                    <>
+                    <DrawerHeader className="flex flex-col gap-1">Drawer Title</DrawerHeader>
+                    <DrawerBody>
+                        <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam pulvinar risus non
+                        risus hendrerit venenatis. Pellentesque sit amet hendrerit risus, sed porttitor
+                        quam.
+                        </p>
+                        <p>
+                        Magna exercitation reprehenderit magna aute tempor cupidatat consequat elit dolor
+                        adipisicing. Mollit dolor eiusmod sunt ex incididunt cillum quis. Velit duis sit
+                        officia eiusmod Lorem aliqua enim laboris do dolor eiusmod.
+                        </p>
+                    </DrawerBody>
+                    <DrawerFooter>
+                        <Button color="danger" variant="light" onPress={onClose}>
+                        Close
+                        </Button>
+                        <Button color="primary" onPress={onClose}>
+                        Action
+                        </Button>
+                    </DrawerFooter>
+                    </>
+                )}
+                </DrawerContent>
+            </Drawer>
 
             <Toaster
                 position="top-center"
